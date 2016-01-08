@@ -1,0 +1,11 @@
+{% extends 'core/base_template.html' %}
+
+{% block content %}
+    <li>
+        {% for object in object_list %}
+            <ul>
+                {{ object }}
+            </ul>
+        {% endfor %}
+    </li>
+{% endblock content %}
