@@ -1,11 +1,14 @@
 {% extends 'core/base_template.html' %}
 
 {% block content %}
-    <li>
-        {% for object in object_list %}
-            <ul>
-                {{ object }}
-            </ul>
-        {% endfor %}
-    </li>
+    <a href="{% url 'pessoa:create' %}">Criar pessoa</a>
+    {% if object_list %}
+        <ul>
+            {% for object in object_list %}
+                <li>
+                    <a href="{% url 'pessoa:update' pk=object.pk %}">{{ object.pk }} - {{ object.nome }}</a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
 {% endblock content %}
