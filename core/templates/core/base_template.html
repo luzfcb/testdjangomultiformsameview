@@ -1,3 +1,4 @@
+{% load staticfiles %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,6 +8,9 @@
 <body>
 {% block content %}
 {% endblock content %}
-
+<script src="{% static 'jquery-2.2.0.min.js' %}"></script>
+<script src="{% static 'jquery_csrftoken.js' %}"></script>
+{% block extra_js %}
+{% endblock extra_js %}
 </body>
 </html>

@@ -36,7 +36,7 @@ class ReValidarForm(forms.Form):
     def clean(self):
         id = self.cleaned_data.get('id')
         hash = self.cleaned_data.get('hash')
-        if not self._id != id and not id != hash:
+        if not self._id == id and not id == hash:
             raise forms.ValidationError(
                 "Hash errado"
             )

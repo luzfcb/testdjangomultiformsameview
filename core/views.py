@@ -38,6 +38,8 @@ class PessoaUpdate(generic.UpdateView):
     form_class = PessoaForm
     prefix = 'pessoa_update'
     template_name = 'core/pessoa_update.html'
+    revalidar_form_id = 'id_revalidar_form'
+    deletar_form_id = 'id_deletar_form'
 
     def get_success_url(self):
         return reverse_lazy('pessoa:update', kwargs={'pk': self.object.pk})
@@ -50,7 +52,9 @@ class PessoaUpdate(generic.UpdateView):
         context.update(
             {
                 'revalidar_form': revalidar_form,
-                'deletar_form': deletar_form
+                'revalidar_form_id': self.revalidar_form_id,
+                'deletar_form': deletar_form,
+                'deletar_form_id': self.deletar_form_id
             }
         )
         return context
@@ -58,35 +62,42 @@ class PessoaUpdate(generic.UpdateView):
     def post(self, request, *args, **kwargs):
         ret = super(PessoaUpdate, self).post(request, *args, **kwargs)
 
-        revalidar_form = ReValidarForm(data=request.POST, prefix='revalidar', id_obj=self.object.pk)
-        deletar_form = DeletarForm(data=request.POST, prefix='deletar', id_obj=self.object.pk)
-        if revalidar_form:
+        revalidar_form = ReValidarForm(data=request.POST,
+                                       files=request.FILES,
+                                       prefix='revalidar',
+                                       id_obj=self.object.pk)
+        deletar_form = DeletarForm(data=request.POST,
+                                   files=request.FILES,
+                                   prefix='deletar',
+                                   id_obj=self.object.pk)
+        print(request.POST)
+        if self.revalidar_form_id in request.POST:
             if revalidar_form.is_valid():
-                messages.add_message(request, messages.INFO, 'revalidado')
-                print('revalidado')
+                # messages.add_message(request, messages.INFO, 'revalidado com sucesso')
+                print('revalidado com sucesso')
                 return JsonResponse({
-                    'mensagem': 'valido revalidado'
+                    'mensagem': 'revalidado com sucesso'
                 })
             else:
-                messages.add_message(request, messages.INFO, 'invalido revalidado')
-                print('invalido  revalidado')
+                messages.add_message(request, messages.INFO, 'erro ao revalidar')
+                print('erro ao revalidar')
 
                 return JsonResponse({
-                    'mensagem': 'invalido revalidado'
+                    'mensagem': 'erro ao revalidar'
                 })
 
-        if deletar_form:
+        if self.deletar_form_id in request.POST:
             if deletar_form.is_valid():
-                messages.add_message(request, messages.INFO, 'deletado')
-                print('deletado')
+                # messages.add_message(request, messages.INFO, 'deletado com sucesso')
+                print('deletado com sucesso')
                 return JsonResponse({
-                    'mensagem': 'valido deletado'
+                    'mensagem': 'deletado com sucesso'
                 })
             else:
-                messages.add_message(request, messages.INFO, 'invalido deletado')
-                print('invalido deletado')
+                messages.add_message(request, messages.INFO, 'erro ao deletar')
+                print('erro ao deletar')
                 return JsonResponse({
-                    'mensagem': 'invalido deletado'
+                    'mensagem': 'erro ao deletar'
                 })
 
         return ret
