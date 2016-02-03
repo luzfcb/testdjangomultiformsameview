@@ -12,7 +12,7 @@
     <form action="{% url 'pessoa:update' object.pk %}" method="post" id="id_pessoa:update_form">
         {% csrf_token %}
         {{ form }}
-        <input type="submit" value="id_pessoa:update_form_submit">
+        <input type="submit" value="id_pessoa_update_form_submit">
     </form>
 
     <form action="{% url 'pessoa:update' object.pk %}" method="post" id="{{ deletar_form_id }}">
@@ -50,7 +50,7 @@
         function create_post(form_element) {
             console.log("create post is working!"); // sanity check
             var data = $(form_element).serializeArray();
-            console.table(data);
+
 
             data.push({'name': form_element.id, 'value': form_element.id});
 
