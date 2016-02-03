@@ -1,13 +1,6 @@
 {% extends 'core/base_template.html' %}
 
 {% block content %}
-    {% if messages %}
-        <ul class="messages">
-            {% for message in messages %}
-                <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
-            {% endfor %}
-        </ul>
-    {% endif %}
 
     <form action="{% url 'pessoa:update' object.pk %}" method="post" id="id_pessoa:update_form">
         {% csrf_token %}
@@ -15,31 +8,42 @@
         <input type="submit" value="id_pessoa_update_form_submit">
     </form>
 
-    <form action="{% url 'pessoa:update' object.pk %}" method="post" id="{{ deletar_form_id }}">
-        {% csrf_token %}
-        {{ deletar_form }}
-        <input type="submit" name="{{ deletar_form_id }}" value="{{ deletar_form_id }}">
-    </form>
-
-    <form action="{% url 'pessoa:update' object.pk %}" method="post" id="{{ revalidar_form_id }}">
-        {% csrf_token %}
-        {{ revalidar_form }}
-        <input type="submit" name="{{ revalidar_form_id }}" value="{{ revalidar_form_id }}">
-    </form>
-
-
 {% endblock content %}
 
 {% block extra_js %}
-    <script>
-        $('#{{ revalidar_form_id }}').on('submit', function (event) {
+    <div style="display: none">
+
+        <form action="{% url 'pessoa:update' object.pk %}" method="post" id="{{ deletar_form_id }}">
+            {% csrf_token %}
+            {{ deletar_form }}
+            <input type="submit" name="{{ deletar_form_id }}" value="{{ deletar_form_id }}">
+        </form>
+
+        <form action="{% url 'pessoa:update' object.pk %}" method="post" id="{{ revalidar_form_id }}">
+            {% csrf_token %}
+            {{ revalidar_form }}
+            <input type="submit" name="{{ revalidar_form_id }}" value="{{ revalidar_form_id }}">
+        </form>
+    </div>
+
+    <script>(function () {
+        'use strict';
+        // Use 'djsimplelock' as namespace.
+        //if (window.luzfcb == undefined) window.luzfcb = {};
+
+        var $revalidar_form = $('#{{ revalidar_form_id }}');
+        var $deletar_form = $('#{{ deletar_form_id }}');
+        var revalidate_lock_at_every_x_seconds = parseInt({{ revalidate_lock_at_every_x_seconds }});
+
+        $revalidar_form.on('submit', function (event) {
             event.preventDefault();
             console.log("form " + this.id + " submitted!"); // sanity check
             //console.log(this);
             create_post(this);
         });
 
-        $('#{{ deletar_form_id }}').on('submit', function (event) {
+
+        $deletar_form.on('submit', function (event) {
             event.preventDefault();
             console.log("form " + this.id + " submitted!"); // sanity check
             //console.log(this);
@@ -58,12 +62,12 @@
 
             $.ajax({
                 url: $(form_element).attr('action').replace(/\s/g, ""), // the endpoint
+                cache: false,
                 type: "POST", // http method
                 data: data // data sent with the post request
             }).done(function (json) {
                 // handle a successful response
                 console.log(json); // log the returned json to the console
-
                 console.log("done"); // another sanity check
             }).fail(function (xhr, errmsg, err) {
                 // handle a non-successful response
@@ -74,6 +78,24 @@
                 console.log('always');
             })
         }
+
+        function revalidar() {
+            $revalidar_form.submit();
+        }
+
+        function desbloquear(){
+            $deletar_form.submit();
+        }
+
+
+        var timeout = setInterval(revalidar, revalidate_lock_at_every_x_seconds * 1000);
+
+        if (window.addEventListener) {
+            window.addEventListener('beforeunload', desbloquear, false);
+        } else {
+            window.attachEvent('onbeforeunload', desbloquear);
+        }
+    })();
 
     </script>
 

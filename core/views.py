@@ -41,15 +41,13 @@ class PessoaCreate(generic.CreateView):
         return reverse_lazy('pessoa:update', kwargs={'pk': self.object.pk})
 
 
-class DocumentoLockMixin(generic.UpdateView):
+class DocumentoLockMixin(object):
     expire_time_in_seconds = 30
-    revalidate_lock_at_every_x_seconds = 15
+    revalidate_lock_at_every_x_seconds = 5
     revalidar_form_id = 'id_revalidar_form'
     deletar_form_id = 'id_deletar_form'
 
     def create_lock(self, request, *args, **kwargs):
-        from django.contrib.sessions.models import Session
-        # session = Session.objects.get(session_key=request.session.session_key)
         if not self.object:
             self.object = self.get_object()
 
@@ -62,7 +60,8 @@ class DocumentoLockMixin(generic.UpdateView):
                                                           bloqueado_por_full_name=request.user.get_full_name(),
                                                           # session_key=session.session_key,
                                                           expire_date=expira_em)
-            msg = 'Bloqueado documento: {}'.format(documento_lock.documento.pk)
+            msg = 'Bloqueado documento: {} para {} '.format(documento_lock.documento.pk,
+                                                            documento_lock.bloqueado_por_full_name)
             logger.debug(msg)
             print(msg)
 
@@ -76,7 +75,8 @@ class DocumentoLockMixin(generic.UpdateView):
                     documento_lock.delete()
                 elif documento_lock.bloqueado_por.pk == request.user.pk:
                     documento_lock.delete()
-                    msg = 'Deletado bloqueado documento: {}'.format(documento_lock.documento.pk)
+                    msg = 'Deletado bloqueado documento: {} por {}'.format(documento_lock.documento.pk,
+                                                                           documento_lock.bloqueado_por_full_name)
                     print(msg)
                     logger.debug(msg)
             except DocumentoLock.DoesNotExist:
@@ -87,12 +87,15 @@ class DocumentoLockMixin(generic.UpdateView):
         if not self.object:
             self.object = self.get_object()
         with transaction.atomic():
-            documento_lock = DocumentoLock.objects.get(documento=self.object)
+            try:
+                documento_lock = DocumentoLock.objects.get(documento=self.object)
 
-            if documento_lock.bloqueado_por.pk == request.user.pk:
-                expira_em = timezone.now() + timezone.timedelta(seconds=self.expire_time_in_seconds)
-                documento_lock.expire_date = expira_em
-                documento_lock.save()
+                if documento_lock.bloqueado_por.pk == request.user.pk:
+                    expira_em = timezone.now() + timezone.timedelta(seconds=self.expire_time_in_seconds)
+                    documento_lock.expire_date = expira_em
+                    documento_lock.save()
+            except DocumentoLock.DoesNotExist:
+                self.create_lock(request)
 
     def get(self, request, *args, **kwargs):
         original_response = super(DocumentoLockMixin, self).get(request, *args, **kwargs)
@@ -124,8 +127,12 @@ class DocumentoLockMixin(generic.UpdateView):
 
     def post(self, request, *args, **kwargs):
         if request.is_ajax:
-            if not self.object:
+            if not hasattr(self, 'object'):
+
                 self.object = self.get_object()
+            else:
+                if not self.object:
+                    self.object = self.get_object()
 
             revalidar_form = ReValidarForm(data=request.POST,
                                            files=request.FILES,
@@ -143,14 +150,16 @@ class DocumentoLockMixin(generic.UpdateView):
                     # messages.add_message(request, messages.INFO, 'revalidado com sucesso')
                     print('revalidado com sucesso')
                     return JsonResponse({
-                        'mensagem': 'revalidado com sucesso'
+                        'mensagem': 'revalidado com sucesso',
+                        'id': self.object.pk
                     })
                 else:
                     messages.add_message(request, messages.INFO, 'erro ao revalidar')
                     print('erro ao revalidar')
 
                     return JsonResponse({
-                        'mensagem': 'erro ao revalidar'
+                        'mensagem': 'erro ao revalidar',
+                        'id': self.object.pk
                     })
 
             if self.deletar_form_id in request.POST:
@@ -160,13 +169,15 @@ class DocumentoLockMixin(generic.UpdateView):
                     # messages.add_message(request, messages.INFO, 'deletado com sucesso')
                     print('deletado com sucesso')
                     return JsonResponse({
-                        'mensagem': 'deletado com sucesso'
+                        'mensagem': 'deletado com sucesso',
+                        'id': self.object.pk
                     })
                 else:
                     messages.add_message(request, messages.INFO, 'erro ao deletar')
                     print('erro ao deletar')
                     return JsonResponse({
-                        'mensagem': 'erro ao deletar'
+                        'mensagem': 'erro ao deletar',
+                        'id': self.object.pk
                     })
 
         ret = super(DocumentoLockMixin, self).post(request, *args, **kwargs)
@@ -197,75 +208,11 @@ class DocumentoLockMixin(generic.UpdateView):
         return context
 
 
-class PessoaUpdate(generic.UpdateView):
+class PessoaUpdate(DocumentoLockMixin, generic.UpdateView):
     model = Pessoa
     form_class = PessoaForm
     prefix = 'pessoa_update'
     template_name = 'core/pessoa_update.html'
-    revalidar_form_id = 'id_revalidar_form'
-    deletar_form_id = 'id_deletar_form'
 
     def get_success_url(self):
         return reverse_lazy('pessoa:update', kwargs={'pk': self.object.pk})
-
-    def get_context_data(self, **kwargs):
-        context = super(PessoaUpdate, self).get_context_data(**kwargs)
-        revalidar_form = ReValidarForm(prefix='revalidar', initial={'hash': self.object.pk, 'id': self.object.pk})
-        deletar_form = DeletarForm(prefix='deletar', initial={'hash': self.object.pk, 'id': self.object.pk})
-
-        context.update(
-            {
-                'revalidar_form': revalidar_form,
-                'revalidar_form_id': self.revalidar_form_id,
-                'deletar_form': deletar_form,
-                'deletar_form_id': self.deletar_form_id
-            }
-        )
-        return context
-
-    def post(self, request, *args, **kwargs):
-
-        if request.is_ajax:
-            self.object = self.get_object()
-
-            revalidar_form = ReValidarForm(data=request.POST,
-                                           files=request.FILES,
-                                           prefix='revalidar',
-                                           id_obj=self.object.pk)
-            deletar_form = DeletarForm(data=request.POST,
-                                       files=request.FILES,
-                                       prefix='deletar',
-                                       id_obj=self.object.pk)
-
-            if self.revalidar_form_id in request.POST:
-                if revalidar_form.is_valid():
-                    print(revalidar_form.cleaned_data)
-                    # messages.add_message(request, messages.INFO, 'revalidado com sucesso')
-                    print('revalidado com sucesso')
-                    return JsonResponse({
-                        'mensagem': 'revalidado com sucesso'
-                    })
-                else:
-                    messages.add_message(request, messages.INFO, 'erro ao revalidar')
-                    print('erro ao revalidar')
-
-                    return JsonResponse({
-                        'mensagem': 'erro ao revalidar'
-                    })
-
-            if self.deletar_form_id in request.POST:
-                if deletar_form.is_valid():
-                    print(deletar_form.cleaned_data)
-                    # messages.add_message(request, messages.INFO, 'deletado com sucesso')
-                    print('deletado com sucesso')
-                    return JsonResponse({
-                        'mensagem': 'deletado com sucesso'
-                    })
-                else:
-                    messages.add_message(request, messages.INFO, 'erro ao deletar')
-                    print('erro ao deletar')
-                    return JsonResponse({
-                        'mensagem': 'erro ao deletar'
-                    })
-        ret = super(PessoaUpdate, self).post(request, *args, **kwargs)
-        return ret
