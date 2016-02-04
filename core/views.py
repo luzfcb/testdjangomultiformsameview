@@ -46,6 +46,11 @@ class DocumentoLockMixin(object):
     revalidate_lock_at_every_x_seconds = 5
     revalidar_form_id = 'id_revalidar_form'
     deletar_form_id = 'id_deletar_form'
+    this_view_named_url_str = ''
+
+    def get_label(self, model_instance):
+        return '{app_name}.{model_name}'.format(app_name=model_instance._meta.app_label,
+                                         model_name=str(model_instance.__class__.__name__).lower())
 
     def create_lock(self, request, *args, **kwargs):
         if not self.object:
@@ -53,14 +58,16 @@ class DocumentoLockMixin(object):
 
         with transaction.atomic():
             expira_em = timezone.now() + timezone.timedelta(seconds=self.expire_time_in_seconds)
+            label = self.get_label(self.object)
 
-            documento_lock = DocumentoLock.objects.create(documento=self.object,
+            documento_lock = DocumentoLock.objects.create(model_pk=self.object.pk,
+                                                          app_and_model=label,
                                                           bloqueado_por=request.user,
                                                           bloqueado_por_user_name=request.user.username,
                                                           bloqueado_por_full_name=request.user.get_full_name(),
                                                           # session_key=session.session_key,
                                                           expire_date=expira_em)
-            msg = 'Bloqueado documento: {} para {} '.format(documento_lock.documento.pk,
+            msg = 'Bloqueado documento: {} para {} '.format(documento_lock.model_pk,
                                                             documento_lock.bloqueado_por_full_name)
             logger.debug(msg)
             print(msg)
@@ -70,12 +77,13 @@ class DocumentoLockMixin(object):
             self.object = self.get_object()
         with transaction.atomic():
             try:
-                documento_lock = DocumentoLock.objects.get(documento=self.object)
+                label = self.get_label(self.object)
+                documento_lock = DocumentoLock.objects.get(model_pk=self.object.pk, app_and_model=label)
                 if agora > documento_lock.expire_date:
                     documento_lock.delete()
                 elif documento_lock.bloqueado_por.pk == request.user.pk:
                     documento_lock.delete()
-                    msg = 'Deletado bloqueado documento: {} por {}'.format(documento_lock.documento.pk,
+                    msg = 'Deletado bloqueado documento: {} por {}'.format(documento_lock.model_pk,
                                                                            documento_lock.bloqueado_por_full_name)
                     print(msg)
                     logger.debug(msg)
@@ -88,7 +96,8 @@ class DocumentoLockMixin(object):
             self.object = self.get_object()
         with transaction.atomic():
             try:
-                documento_lock = DocumentoLock.objects.get(documento=self.object)
+                label = self.get_label(self.object)
+                documento_lock = DocumentoLock.objects.get(model_pk=self.object.pk, app_and_model=label)
 
                 if documento_lock.bloqueado_por.pk == request.user.pk:
                     expira_em = timezone.now() + timezone.timedelta(seconds=self.expire_time_in_seconds)
@@ -102,7 +111,8 @@ class DocumentoLockMixin(object):
         # if self.object and self.object.esta_ativo:
         if self.object:
             try:
-                documento_lock = DocumentoLock.objects.get(documento=self.object)
+                label = self.get_label(self.object)
+                documento_lock = DocumentoLock.objects.get(model_pk=self.object.pk, app_and_model=label)
                 agora = timezone.now()
                 if documento_lock and agora > documento_lock.expire_date:
                     self.delete_lock(request, agora)
@@ -202,7 +212,8 @@ class DocumentoLockMixin(object):
                 'revalidar_form': revalidar_form,
                 'revalidar_form_id': self.revalidar_form_id,
                 'deletar_form': deletar_form,
-                'deletar_form_id': self.deletar_form_id
+                'deletar_form_id': self.deletar_form_id,
+                'update_view_str': 'pessoa:update'
             }
         )
         return context

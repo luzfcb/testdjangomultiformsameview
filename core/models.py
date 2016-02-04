@@ -17,11 +17,11 @@ class DocumentoLock(models.Model):
                                       blank=True, on_delete=models.SET_NULL, editable=False)
     bloqueado_por_user_name = models.CharField(blank=True, max_length=500, editable=False)
     bloqueado_por_full_name = models.CharField(blank=True, max_length=500, editable=False)
-#    session_key = models.CharField('session key', max_length=40, null=True,
-#                                   blank=True, editable=False)
+    #    session_key = models.CharField('session key', max_length=40, null=True,
+    #                                   blank=True, editable=False)
 
     expire_date = models.DateTimeField('expire date')
 
-    documento = models.ForeignKey(to=Pessoa,
-                                  related_name="%(app_label)s_%(class)s_document", null=True,
-                                  blank=True, on_delete=models.SET_NULL, editable=False, db_index=True)
+    app_and_model = models.CharField(max_length=350, editable=False, blank=True)
+    model_pk = models.IntegerField(null=True,
+                                   blank=True, editable=False, db_index=True)

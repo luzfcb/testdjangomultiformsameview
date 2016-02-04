@@ -13,16 +13,14 @@
 {% block extra_js %}
     <div style="display: none">
 
-        <form action="{% url 'pessoa:update' object.pk %}" method="post" id="{{ deletar_form_id }}">
+        <form action="{% url update_view_str object.pk %}" method="post" id="{{ deletar_form_id }}">
             {% csrf_token %}
             {{ deletar_form }}
-            <input type="submit" name="{{ deletar_form_id }}" value="{{ deletar_form_id }}">
         </form>
 
-        <form action="{% url 'pessoa:update' object.pk %}" method="post" id="{{ revalidar_form_id }}">
+        <form action="{% url update_view_str object.pk %}" method="post" id="{{ revalidar_form_id }}">
             {% csrf_token %}
             {{ revalidar_form }}
-            <input type="submit" name="{{ revalidar_form_id }}" value="{{ revalidar_form_id }}">
         </form>
     </div>
 
@@ -76,17 +74,16 @@
 
             }).always(function () {
                 console.log('always');
-            })
+            });
         }
 
         function revalidar() {
             $revalidar_form.submit();
         }
 
-        function desbloquear(){
+        function desbloquear() {
             $deletar_form.submit();
         }
-
 
         var timeout = setInterval(revalidar, revalidate_lock_at_every_x_seconds * 1000);
 
@@ -95,8 +92,8 @@
         } else {
             window.attachEvent('onbeforeunload', desbloquear);
         }
-    })();
 
+    })();
     </script>
 
 {% endblock extra_js %}
