@@ -7,6 +7,7 @@
             {% for object in object_list %}
                 <li>
                     <a href="{% url 'pessoa:update' pk=object.pk %}">{{ object.pk }} - {{ object.nome }}</a>
+                    <a href="{% url 'pessoa:update2' pk=object.pk %}">{{ object.pk }} - {{ object.nome }}</a>
                 </li>
             {% endfor %}
         </ul>

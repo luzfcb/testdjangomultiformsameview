@@ -18,5 +18,8 @@ urlpatterns = [
         views.PessoaUpdate.as_view(),
         name='update'
         ),
-
+    url(r'^update2/(?P<pk>\d+)/$',
+        views.update_view,
+        name='update2'
+        ),
 ]
